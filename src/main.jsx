@@ -1538,4 +1538,38 @@ function EntryModal({ month, myId, myName, groups, activeGroupId, onOpenGroupMod
   );
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary capturou:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '24px', maxWidth: '600px', margin: '40px auto', background: '#fff', borderRadius: '16px', border: '1px solid #fee2e2', color: '#991b1b', fontFamily: 'sans-serif' }}>
+          <h2 style={{ marginTop: 0 }}>Ocorreu uma falha ao renderizar a tela</h2>
+          <p style={{ fontSize: '14px', color: '#666' }}>{this.state.error?.message || 'Erro inesperado'}</p>
+          <button
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+            style={{ padding: '10px 18px', background: '#183f35', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Limpar cache e recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
