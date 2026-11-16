@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {split,installments,settle,monthly,cents,balances} from './engine.js';
+const participants=[{id:'jonas',weight:50},{id:'cris',weight:50}];const expense=(amount,payer,paid=true)=>({amount,payer,paid,scope:'shared',participants,kind:'expense',month:'2026-11'});
+test('aluguel: crédito restrito à parte alheia',()=>assert.deepEqual(settle([expense(170000,'cris')]),[{from:'jonas',to:'cris',amount:85000}]));
+test('compensa mercado sem duplicar obrigação',()=>assert.deepEqual(settle([expense(170000,'cris'),expense(60000,'jonas')]),[{from:'jonas',to:'cris',amount:55000}]));
+test('pendências não geram créditos',()=>assert.deepEqual(settle([expense(170000,'cris',false)]),[]));
+test('cota fixa e resíduo',()=>assert.deepEqual(split(40000,[{id:'cris',fixed:15000},{id:'jonas',weight:1}]),{cris:15000,jonas:25000}));
+test('parcelas preservam centavos e cruzam ano',()=>{const r=installments(10000,3,'2026-12');assert.equal(r.reduce((s,p)=>s+p.amount,0),10000);assert.equal(r[1].month,'2027-01');assert.deepEqual(r.map(p=>p.amount),[3334,3333,3333]);});
+test('rateios conservam total para 1000 valores',()=>{for(let n=1;n<=1000;n++)assert.equal(Object.values(split(n,[{id:'a',weight:1},{id:'b',weight:1},{id:'c',weight:1}])).reduce((a,b)=>a+b,0),n)});
+test('capital usa obrigação uma vez e ignora receita alheia',()=>assert.deepEqual(monthly([{amount:550000,kind:'income',scope:'private',owner:'jonas',month:'2026-11'},{amount:999999,kind:'income',scope:'private',owner:'cris',month:'2026-11'},expense(170000,'cris')],'jonas','2026-11'),{income:550000,obligation:85000,free:465000}));
+test('valida entrada monetária',()=>{assert.equal(cents('1700,50'),170050);for(const s of ['-1','NaN','1.234,50','0','2.999'])assert.throws(()=>cents(s));});
+test('rejeita cotas e parcelas inválidas',()=>{assert.throws(()=>split(100,[{id:'a',fixed:101}]));assert.throws(()=>installments(10,0,'2026-11'));assert.throws(()=>split(10,[{id:'a',weight:0}]));});
+test('balanço multilateral conserva zero',()=>{const b=balances([{...expense(10000,'a'),participants:[{id:'a',weight:1},{id:'b',weight:1},{id:'c',weight:1}]}]);assert.equal(Object.values(b).reduce((a,b)=>a+b,0),0);});
